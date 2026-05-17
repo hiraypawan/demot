@@ -1,0 +1,67 @@
+name: Telus OTP Automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      accounts_per_job:
+        description: 'Number of accounts per job (default: 15)'
+        required: false
+        default: '15'
+      total_jobs:
+        description: 'Number of parallel jobs (default: 20)'
+        required: false
+        default: '20'
+
+jobs:
+  otp-automation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        job_index: ${{ fromJson(github.inputs.total_jobs || '20') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable xvfb x11-utils libglib2.0-0 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libpango-1.0-0 libcairo2
+
+      - name: Install Python dependencies
+        run: |
+          pip install selenium webdriver-manager
+
+      - name: Display environment
+        run: |
+          echo "Job Index: ${{ matrix.job_index }}"
+          python --version
+          google-chrome --version
+
+      - name: Run Telus Automation
+        env:
+          JOB_INDEX: ${{ matrix.job_index }}
+          ACCOUNT_OFFSET: ${{ (matrix.job_index - 1) * (github.inputs.accounts_per_job || 15) }}
+          ACCOUNT_LIMIT: ${{ github.inputs.accounts_per_job || 15 }}
+          GITHUB_ACTIONS: true
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python telus_gh.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: otp-results-job-${{ matrix.job_index }}
+          path: |
+            otp_tracking.json
+          retention-days: 7
