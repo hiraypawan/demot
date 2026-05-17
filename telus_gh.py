@@ -158,9 +158,8 @@ def setup_chrome(log_prefix):
     for attempt in range(3):
         try:
             options = Options()
-            # Headless with Xvfb - Xvfb provides virtual screen, Chrome runs headless
-            # The combination helps bypass some detection
-            options.add_argument('--headless=new')
+            # NO headless - Xvfb provides virtual display, run Chrome in normal mode
+            # This should bypass Sumsub headless detection
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-gpu')
