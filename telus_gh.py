@@ -239,17 +239,26 @@ def wait_for_iframe_content(driver, timeout=120, prefix=""):
     for retry in range(max_retries):
         try:
             iframes = driver.find_elements(By.CSS_SELECTOR, "iframe")
+            safe_print(f"  {prefix} Attempt {retry+1}: Found {len(iframes)} iframes")
             if iframes:
+                safe_print(f"  {prefix} Switching to iframe...")
                 driver.switch_to.frame(iframes[0])
                 time.sleep(20)
                 try:
                     body = driver.find_element(By.TAG_NAME, 'body')
-                    if body and len(body.text.strip()) > 50:
+                    body_text = body.text.strip() if body else ""
+                    safe_print(f"  {prefix} Iframe body length: {len(body_text)} chars")
+                    if body_text and len(body_text) > 50:
+                        safe_print(f"  {prefix} Iframe content preview: {body_text[:100]}...")
                         return True
-                except:
-                    pass
-        except:
-            pass
+                    else:
+                        safe_print(f"  {prefix} Iframe empty or too short")
+                        driver.switch_to.default_content()
+                except Exception as e:
+                    safe_print(f"  {prefix} Error reading iframe: {str(e)[:50]}")
+                    driver.switch_to.default_content()
+        except Exception as e:
+            safe_print(f"  {prefix} Iframe search error: {str(e)[:50]}")
         time.sleep(10)
     return False
 
@@ -317,12 +326,22 @@ def handle_phone_verification(driver, account, prefix=""):
 
     safe_print(f"  {prefix} 📱 Phone: {phone}")
     safe_print(f"  {prefix} 📞 Number: {phone_number}")
+    safe_print(f"  {prefix} 🌐 Navigating to profile page...")
 
     driver.get("https://www.telusinternational.ai/cmp/profile")
     time.sleep(15)
+    
+    # Debug: Check page source
+    safe_print(f"  {prefix} Current URL: {driver.current_url}")
+    safe_print(f"  {prefix} Page title: {driver.title}")
+    
+    # Check for iframes
+    iframes = driver.find_elements(By.TAG_NAME, "iframe")
+    safe_print(f"  {prefix} Found {len(iframes)} iframes on page")
 
     if not wait_for_iframe_content(driver, timeout=90, prefix=prefix):
-        return False
+        safe_print(f"  {prefix} [!] Iframe content not found, trying without iframe...")
+        # Try direct approach without iframe switching
 
     try:
         safe_print(f"  {prefix} 🔍 Searching for country dropdown...")
