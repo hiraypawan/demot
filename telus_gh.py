@@ -20,6 +20,15 @@ import re
 from pathlib import Path
 from datetime import datetime, timedelta
 
+# Selenium imports
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 # --- ENVIRONMENT DETECTION ---
 IS_GITHUB_ACTIONS = os.environ.get('GITHUB_ACTIONS') == 'true'
 IS_LINUX = sys.platform != 'win32'
@@ -44,6 +53,11 @@ def safe_print(msg):
 
 # --- ACCOUNTS LOADER ---
 def load_accounts():
+    # Debug: Show all env vars
+    safe_print(f"  [DEBUG] ACCOUNT_OFFSET env: {os.environ.get('ACCOUNT_OFFSET', 'NOT SET')}")
+    safe_print(f"  [DEBUG] ACCOUNT_LIMIT env: {os.environ.get('ACCOUNT_LIMIT', 'NOT SET')}")
+    safe_print(f"  [DEBUG] JOB_INDEX env: {os.environ.get('JOB_INDEX', 'NOT SET')}")
+    
     if not os.path.exists(ACCOUNTS_FILE):
         safe_print(f"\n  [!] 'accounts.json' not found at {ACCOUNTS_FILE}")
         sys.exit(1)
