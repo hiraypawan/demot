@@ -8,9 +8,9 @@ on:
         required: false
         default: '15'
       total_jobs:
-        description: 'Number of parallel jobs (default: 20)'
+        description: 'Number of parallel jobs (default: 3)'
         required: false
-        default: '20'
+        default: '3'
 
 jobs:
   otp-automation:
@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job_index: ${{ fromJson(github.inputs.total_jobs || '20') }}
+        job_index: [1, 2, 3]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
