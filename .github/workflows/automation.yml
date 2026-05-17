@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job_index: ${{ fromJson('[0, 1, 2, 3, 4, 5, 6, 7, 8, 9][:inputs.parallel_jobs]') }}
+        job_index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,6 +50,7 @@ jobs:
           google-chrome --version
 
       - name: Run Telus Automation
+        if: matrix.job_index < fromJson(inputs.parallel_jobs)
         env:
           JOB_INDEX: ${{ matrix.job_index }}
           GITHUB_ACTIONS: true
