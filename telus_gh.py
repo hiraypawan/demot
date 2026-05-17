@@ -169,17 +169,24 @@ def setup_chrome(log_prefix):
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
 
+    # Kill any existing Chrome processes first
+    try:
+        subprocess.run(['pkill', '-f', 'chrome'], capture_output=True, timeout=5)
+        time.sleep(2)
+    except:
+        pass
+
     for attempt in range(3):
         try:
             options = Options()
-            # Use headless with Xvfb - add more flags for stealth
+            # Use headless with Xvfb - add more flags for stability
             options.add_argument('--headless=new')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-setuid-sandbox')
             options.add_argument('--disable-gpu')
+            options.add_argument('--disable-software-rasterizer')
             options.add_argument('--window-size=1920,1080')
-            options.add_argument('--start-maximized')
             options.add_argument('--disable-blink-features=AutomationControlled')
             options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
             options.add_experimental_option('useAutomationExtension', False)
@@ -190,32 +197,30 @@ def setup_chrome(log_prefix):
             options.add_argument('--disable-default-apps')
             options.add_argument('--disable-sync')
             options.add_argument('--disable-translate')
-            options.add_argument('--metrics-recording-only')
             options.add_argument('--mute-audio')
             options.add_argument('--no-first-run')
-            options.add_argument('--safebrowsing-disable-auto-update')
-            
-            # Stealth user agent
-            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-            
-            # Add remote-debugging-port for debugging if needed
-            options.add_argument('--remote-debugging-port=9222')
-            
-            # Additional stability options
-            options.add_argument('--disable-software-rasterizer')
-            options.add_argument('--disable-features=VizDisplayCompositor')
             options.add_argument('--disable-breakpad')
-            options.add_argument('--disable-client-side-phishing-detection')
             options.add_argument('--disable-hang-monitor')
             options.add_argument('--disable-ipc-flooding-protection')
-            options.add_argument('--disable-renderer-backgrounding')
-            options.add_argument('--enable-features=NetworkService,NetworkServiceInProcess')
-            options.add_argument('--force-color-profile=srgb')
             
-            driver = webdriver.Chrome(options=options)
+            # User agent
+            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            
+            # Stability - avoid OOM
+            options.add_argument('--js-flags=--max-old-space-size=512')
+            options.add_argument('--disable-background-timer-throttling')
+            options.add_argument('--disable-backgrounding-occluded-windows')
+            options.add_argument('--disable-renderer-backgrounding')
+            options.add_argument('--single-process')  # Use single process mode
+            
+            service = Service(log_path='/dev/null')
+            driver = webdriver.Chrome(service=service, options=options)
+            driver.set_page_load_timeout(60)
+            driver.implicitly_wait(10)
             check_tabs(driver)
             return driver
         except Exception as e:
+            safe_print(f"  {log_prefix} Chrome setup error: {str(e)[:50]}")
             if attempt < 2:
                 safe_print(f"  {log_prefix} Retry {attempt+1}/3 after 4s...")
                 time.sleep(4)
