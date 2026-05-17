@@ -19,7 +19,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job_index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        include:
+          - job_index: 0
+          - job_index: 1
+          - job_index: 2
+          - job_index: 3
+          - job_index: 4
+          - job_index: 5
+          - job_index: 6
+          - job_index: 7
+          - job_index: 8
+          - job_index: 9
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,20 +54,17 @@ jobs:
 
       - name: Display environment
         run: |
+          echo "Job Index: ${{ matrix.job_index }}"
           echo "Parallel Jobs: ${{ inputs.parallel_jobs }}"
           echo "Accounts per Job: ${{ inputs.accounts_per_job }}"
           python --version
-          google-chrome --version
 
       - name: Run Telus Automation
-        if: matrix.job_index < fromJson(inputs.parallel_jobs)
-        env:
-          JOB_INDEX: ${{ matrix.job_index }}
-          GITHUB_ACTIONS: true
         run: |
+          # Calculate offset based on job index
           OFFSET=$(( ${{ matrix.job_index }} * ${{ inputs.accounts_per_job }} ))
           LIMIT=${{ inputs.accounts_per_job }}
-          echo "Starting Job $JOB_INDEX with offset $OFFSET and limit $LIMIT accounts"
+          echo "Starting Job ${{ matrix.job_index }} with offset $OFFSET and limit $LIMIT accounts"
           export ACCOUNT_OFFSET=$OFFSET
           export ACCOUNT_LIMIT=$LIMIT
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python telus_gh.py
