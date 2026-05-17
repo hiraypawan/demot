@@ -28,9 +28,9 @@ IS_LINUX = sys.platform != 'win32'
 PROJECT_URL = "https://www.telusinternational.ai/snake/?redirect=https://www.telusinternational.ai/cmp"
 COOLDOWN_HOURS = 12
 
-# Matrix chunking via environment variables
-ACCOUNT_OFFSET = int(os.environ.get('ACCOUNT_OFFSET', '0'))
-ACCOUNT_LIMIT = int(os.environ.get('ACCOUNT_LIMIT', '0'))  # 0 = all remaining
+# Matrix chunking via environment variables - read at runtime
+ACCOUNT_OFFSET = 0
+ACCOUNT_LIMIT = 0
 
 BASE_DIR = os.environ.get('GITHUB_WORKSPACE', os.path.dirname(os.path.abspath(__file__)))
 ACCOUNTS_FILE = os.path.join(BASE_DIR, "accounts.json")
@@ -57,11 +57,15 @@ def load_accounts():
             sys.exit(1)
 
         # Apply chunking for matrix
-        if ACCOUNT_LIMIT > 0:
-            start = ACCOUNT_OFFSET
-            end = min(ACCOUNT_OFFSET + ACCOUNT_LIMIT, len(accounts))
+        account_offset = int(os.environ.get('ACCOUNT_OFFSET', '0'))
+        account_limit = int(os.environ.get('ACCOUNT_LIMIT', '0'))
+        
+        if account_limit > 0:
+            start = account_offset
+            end = min(account_offset + account_limit, len(accounts))
             accounts = accounts[start:end]
             safe_print(f"  [*] Processing accounts {start+1} to {end} ({len(accounts)} accounts)")
+            safe_print(f"  [*] Offset: {account_offset}, Limit: {account_limit}")
 
         return accounts
     except Exception as e:
@@ -184,9 +188,12 @@ def get_ip_info(driver):
     try:
         driver.get('http://ip-api.com/json/')
         time.sleep(2)
-        return {'ip': json.loads(driver.find_element(By.TAG_NAME, 'body').text).get('query', 'Unknown')}
-    except:
-        pass
+        body_text = driver.find_element(By.TAG_NAME, 'body').text
+        if body_text:
+            return {'ip': json.loads(body_text).get('query', 'Unknown')}
+    except Exception as e:
+        safe_print(f"  [*] IP check failed: {str(e)[:50]}")
+    return {'ip': 'Unknown'}
 
 # --- SELENIUM FUNCTIONS ---
 def check_for_error(driver):
@@ -527,9 +534,12 @@ def main():
     safe_print("\n" + "="*60 + "\n   TELUS GITHUB ACTIONS BOT\n" + "="*60)
 
     job_index = os.environ.get('JOB_INDEX', '1')
+    account_offset = int(os.environ.get('ACCOUNT_OFFSET', '0'))
+    account_limit = int(os.environ.get('ACCOUNT_LIMIT', '0'))
+    
     safe_print(f"  Job Index: {job_index}")
-    safe_print(f"  Account Offset: {ACCOUNT_OFFSET}")
-    safe_print(f"  Account Limit: {ACCOUNT_LIMIT}")
+    safe_print(f"  Account Offset: {account_offset}")
+    safe_print(f"  Account Limit: {account_limit}")
 
     all_accounts = load_accounts()
     kill_browser_processes()
