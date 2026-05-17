@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       parallel_jobs:
-        description: 'Number of parallel jobs (1-10)'
+        description: 'Number of parallel jobs (1-3)'
         required: false
-        default: '3'
+        default: '1'
       accounts_per_job:
         description: 'Accounts per job (1-30)'
         required: false
-        default: '10'
+        default: '1'
 
 jobs:
   otp-automation:
@@ -19,17 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - job_index: 0
-          - job_index: 1
-          - job_index: 2
-          - job_index: 3
-          - job_index: 4
-          - job_index: 5
-          - job_index: 6
-          - job_index: 7
-          - job_index: 8
-          - job_index: 9
+        job_index: [0, 1, 2]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,22 +42,21 @@ jobs:
         run: |
           pip install selenium webdriver-manager
 
-      - name: Display environment
-        run: |
-          echo "Job Index: ${{ matrix.job_index }}"
-          echo "Parallel Jobs: ${{ inputs.parallel_jobs }}"
-          echo "Accounts per Job: ${{ inputs.accounts_per_job }}"
-          python --version
-
       - name: Run Telus Automation
         run: |
-          # Calculate offset based on job index
-          OFFSET=$(( ${{ matrix.job_index }} * ${{ inputs.accounts_per_job }} ))
-          LIMIT=${{ inputs.accounts_per_job }}
-          echo "Starting Job ${{ matrix.job_index }} with offset $OFFSET and limit $LIMIT accounts"
-          export ACCOUNT_OFFSET=$OFFSET
-          export ACCOUNT_LIMIT=$LIMIT
-          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python telus_gh.py
+          # Only run if this job index is within the requested parallel_jobs
+          if [ ${{ matrix.job_index }} -lt ${{ inputs.parallel_jobs }} ]; then
+            OFFSET=$(( ${{ matrix.job_index }} * ${{ inputs.accounts_per_job }} ))
+            LIMIT=${{ inputs.accounts_per_job }}
+            echo "Running Job ${{ matrix.job_index }} (offset: $OFFSET, limit: $LIMIT)"
+            export JOB_INDEX=${{ matrix.job_index }}
+            export ACCOUNT_OFFSET=$OFFSET
+            export ACCOUNT_LIMIT=$LIMIT
+            export GITHUB_ACTIONS=true
+            xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python telus_gh.py
+          else
+            echo "Skipping Job ${{ matrix.job_index }} (not in range 0-${{ inputs.parallel_jobs }})"
+          fi
 
       - name: Upload results
         if: always()
