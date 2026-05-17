@@ -158,21 +158,46 @@ def setup_chrome(log_prefix):
     for attempt in range(3):
         try:
             options = Options()
-            options.add_argument('--headless')
+            # Headless with Xvfb - Xvfb provides virtual screen, Chrome runs headless
+            # The combination helps bypass some detection
+            options.add_argument('--headless=new')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-gpu')
             options.add_argument('--window-size=1920,1080')
             options.add_argument('--start-maximized')
             options.add_argument('--disable-blink-features=AutomationControlled')
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
             options.add_experimental_option('useAutomationExtension', False)
             options.add_argument('--disable-extensions')
             options.add_argument('--disable-popup-blocking')
             options.add_argument('--ignore-certificate-errors')
-
+            options.add_argument('--disable-background-networking')
+            options.add_argument('--disable-default-apps')
+            options.add_argument('--disable-sync')
+            options.add_argument('--disable-translate')
+            options.add_argument('--metrics-recording-only')
+            options.add_argument('--mute-audio')
+            options.add_argument('--no-first-run')
+            options.add_argument('--safebrowsing-disable-auto-update')
+            
+            # Stealth user agent
             options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-
+            
+            # Add remote-debugging-port for debugging if needed
+            options.add_argument('--remote-debugging-port=9222')
+            
+            # Additional stability options
+            options.add_argument('--disable-software-rasterizer')
+            options.add_argument('--disable-features=VizDisplayCompositor')
+            options.add_argument('--disable-breakpad')
+            options.add_argument('--disable-client-side-phishing-detection')
+            options.add_argument('--disable-hang-monitor')
+            options.add_argument('--disable-ipc-flooding-protection')
+            options.add_argument('--disable-renderer-backgrounding')
+            options.add_argument('--enable-features=NetworkService,NetworkServiceInProcess')
+            options.add_argument('--force-color-profile=srgb')
+            
             driver = webdriver.Chrome(options=options)
             check_tabs(driver)
             return driver
@@ -277,7 +302,9 @@ def login_to_telus(driver, account, prefix=""):
         safe_print(f"  {prefix} [*] Login successful")
         return True
     except Exception as e:
-        safe_print(f"  {prefix} [✗] Login Error: {str(e)[:80]}")
+        safe_print(f"  {prefix} [✗] Login Error: {str(e)}")
+        import traceback
+        safe_print(f"  {prefix} [Trace] {traceback.format_exc()[:100]}")
         return False
 
 def handle_phone_verification(driver, account, prefix=""):
