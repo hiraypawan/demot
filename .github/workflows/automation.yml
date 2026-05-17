@@ -3,14 +3,14 @@ name: Telus OTP Automation
 on:
   workflow_dispatch:
     inputs:
-      accounts_per_job:
-        description: 'Number of accounts per job (default: 15)'
-        required: false
-        default: '15'
-      total_jobs:
-        description: 'Number of parallel jobs (default: 3)'
+      parallel_jobs:
+        description: 'Number of parallel jobs (1-10)'
         required: false
         default: '3'
+      accounts_per_job:
+        description: 'Accounts per job (1-30)'
+        required: false
+        default: '10'
 
 jobs:
   otp-automation:
@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job_index: [1]
+        job_index: ${{ fromJson('[0, 1, 2, 3, 4, 5, 6, 7, 8, 9][:inputs.parallel_jobs]') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,18 +44,21 @@ jobs:
 
       - name: Display environment
         run: |
-          echo "Job Index: ${{ matrix.job_index }}"
+          echo "Parallel Jobs: ${{ inputs.parallel_jobs }}"
+          echo "Accounts per Job: ${{ inputs.accounts_per_job }}"
           python --version
           google-chrome --version
 
       - name: Run Telus Automation
         env:
           JOB_INDEX: ${{ matrix.job_index }}
-          ACCOUNT_OFFSET: 0
-          ACCOUNT_LIMIT: 1
           GITHUB_ACTIONS: true
         run: |
-          echo "Starting Job $JOB_INDEX with offset $ACCOUNT_OFFSET and limit $ACCOUNT_LIMIT accounts"
+          OFFSET=$(( ${{ matrix.job_index }} * ${{ inputs.accounts_per_job }} ))
+          LIMIT=${{ inputs.accounts_per_job }}
+          echo "Starting Job $JOB_INDEX with offset $OFFSET and limit $LIMIT accounts"
+          export ACCOUNT_OFFSET=$OFFSET
+          export ACCOUNT_LIMIT=$LIMIT
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python telus_gh.py
 
       - name: Upload results

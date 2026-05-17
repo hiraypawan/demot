@@ -185,15 +185,7 @@ def setup_chrome(log_prefix):
                 raise
 
 def get_ip_info(driver):
-    try:
-        driver.get('http://ip-api.com/json/')
-        time.sleep(2)
-        body_text = driver.find_element(By.TAG_NAME, 'body').text
-        if body_text:
-            return {'ip': json.loads(body_text).get('query', 'Unknown')}
-    except Exception as e:
-        safe_print(f"  [*] IP check failed: {str(e)[:50]}")
-    return {'ip': 'Unknown'}
+    return {'ip': 'Skipped'}
 
 # --- SELENIUM FUNCTIONS ---
 def check_for_error(driver):
