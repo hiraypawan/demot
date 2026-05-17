@@ -494,20 +494,32 @@ def verify_otp(driver, phone, prefix="", max_attempts=4):
 
     for attempt in range(1, max_attempts + 1):
         resend_clicked = False
+        safe_print(f"  {prefix} Waiting for resend button (attempt {attempt}/{max_attempts})...")
 
-        for check in range(15):
+        # Wait longer for the resend button to appear (2 minutes total)
+        for check in range(24):  # 24 * 5s = 120 seconds
             if check_for_error(driver):
                 safe_print(f"\n  {prefix} [*] ERROR: 'Too many attempts' detected!")
                 return False
 
             try:
-                for selector in ["//div[@class='_resendButton_yukhx_78']//span[@role='button']", "//span[text()='Resend a verification code']", "//*[contains(text(), 'Resend a verification code')]"]:
+                # More selectors for resend button
+                resend_selectors = [
+                    "//span[contains(text(), 'Resend')]",
+                    "//button[contains(text(), 'Resend')]",
+                    "//div[contains(text(), 'Resend')]",
+                    "//*[contains(text(), 'Resend a verification code')]",
+                    "//*[contains(text(), 'Resend code')]"
+                ]
+                for selector in resend_selectors:
                     for elem in driver.find_elements(By.XPATH, selector):
                         if elem.is_displayed():
                             elem_text = elem.text.strip().lower()
-                            if 'resend' in elem_text and not any(char.isdigit() for char in elem_text):
+                            # Must contain "resend" but NO countdown digits
+                            if 'resend' in elem_text and not any(c.isdigit() for c in elem_text):
+                                safe_print(f"  {prefix} Found resend button: '{elem.text.strip()}'")
                                 driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
-                                time.sleep(0.5)
+                                time.sleep(1)
                                 driver.execute_script("arguments[0].click();", elem)
                                 resend_clicked = True
                                 safe_print(f"  {prefix} [*] Resend clicked - OTP #{attempt + 1}")
@@ -515,15 +527,15 @@ def verify_otp(driver, phone, prefix="", max_attempts=4):
                                 break
                     if resend_clicked:
                         break
-            except:
-                pass
+            except Exception as e:
+                safe_print(f"  {prefix} Resend search error: {str(e)[:30]}")
 
             if resend_clicked:
                 break
-            time.sleep(8)
+            time.sleep(5)  # Wait 5 seconds between checks
 
         if not resend_clicked:
-            safe_print(f"  {prefix} [!] Resend button never activated")
+            safe_print(f"  {prefix} [!] Resend button never appeared after 2 minutes")
             return False
 
     return True

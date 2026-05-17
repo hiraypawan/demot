@@ -43,20 +43,14 @@ jobs:
           pip install selenium webdriver-manager
 
       - name: Run Telus Automation
+        env:
+          JOB_INDEX: ${{ matrix.job_index }}
+          ACCOUNT_OFFSET: ${{ matrix.job_index * inputs.accounts_per_job }}
+          ACCOUNT_LIMIT: ${{ inputs.accounts_per_job }}
+          GITHUB_ACTIONS: 'true'
         run: |
-          # Only run if this job index is within the requested parallel_jobs
-          if [ ${{ matrix.job_index }} -lt ${{ inputs.parallel_jobs }} ]; then
-            OFFSET=$(( ${{ matrix.job_index }} * ${{ inputs.accounts_per_job }} ))
-            LIMIT=${{ inputs.accounts_per_job }}
-            echo "Running Job ${{ matrix.job_index }} (offset: $OFFSET, limit: $LIMIT)"
-            echo "JOB_INDEX=${{ matrix.job_index }}" >> $GITHUB_ENV
-            echo "ACCOUNT_OFFSET=$OFFSET" >> $GITHUB_ENV
-            echo "ACCOUNT_LIMIT=$LIMIT" >> $GITHUB_ENV
-            echo "GITHUB_ACTIONS=true" >> $GITHUB_ENV
-            xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python telus_gh.py
-          else
-            echo "Skipping Job ${{ matrix.job_index }} (not in range 0-${{ inputs.parallel_jobs }})"
-          fi
+          echo "Running Job $JOB_INDEX (offset: $ACCOUNT_OFFSET, limit: $ACCOUNT_LIMIT)"
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python telus_gh.py
 
       - name: Upload results
         if: always()
