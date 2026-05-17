@@ -45,11 +45,13 @@ jobs:
       - name: Run Telus Automation
         env:
           JOB_INDEX: ${{ matrix.job_index }}
-          ACCOUNT_OFFSET: ${{ matrix.job_index * inputs.accounts_per_job }}
-          ACCOUNT_LIMIT: ${{ inputs.accounts_per_job }}
           GITHUB_ACTIONS: 'true'
         run: |
-          echo "Running Job $JOB_INDEX (offset: $ACCOUNT_OFFSET, limit: $ACCOUNT_LIMIT)"
+          OFFSET=$(( ${{ matrix.job_index }} * ${{ inputs.accounts_per_job }} ))
+          LIMIT=${{ inputs.accounts_per_job }}
+          echo "Running Job $JOB_INDEX (offset: $OFFSET, limit: $LIMIT)"
+          export ACCOUNT_OFFSET=$OFFSET
+          export ACCOUNT_LIMIT=$LIMIT
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python telus_gh.py
 
       - name: Upload results
