@@ -289,50 +289,98 @@ def login_to_telus(driver, account, prefix=""):
 
     safe_print(f"  {prefix} 🌐 Loading Telus website...")
     driver.get(PROJECT_URL)
-    wait_for_page_load(driver, 60, prefix)
-    time.sleep(10)
-
+    time.sleep(15)  # Wait for initial page load
+    
     try:
+        # Handle cookie consent
         try:
-            consent = driver.find_elements(By.XPATH, "//button[contains(text(), 'Got it') or contains(text(), 'Accept')]")
-            if consent:
-                driver.execute_script("arguments[0].click();", consent[0])
+            consent_buttons = driver.find_elements(By.XPATH, "//button[contains(text(), 'Got it') or contains(text(), 'Accept') or contains(text(), 'Agree')]")
+            for btn in consent_buttons:
+                if btn.is_displayed():
+                    driver.execute_script("arguments[0].click();", btn)
+                    time.sleep(2)
+                    safe_print(f"  {prefix} [*] Clicked consent button")
         except:
             pass
-
+        
+        # Wait and find email field
         safe_print(f"  {prefix} [*] Waiting for email field...")
-        email_field = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder='Your email'], input[type='email']")))
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder='Your email'], input[type='email']")))
+        time.sleep(3)
+        
+        email_field = driver.find_element(By.CSS_SELECTOR, "input[placeholder='Your email'], input[type='email']")
+        
+        # Clear and enter email
         try:
-            email_field.clear()
+            email_field.click()
+            time.sleep(1)
+            email_field.send_keys(Keys.CONTROL + "a")
+            email_field.send_keys(Keys.BACKSPACE)
         except:
             pass
-        email_field.send_keys(Keys.CONTROL, 'a')
-        email_field.send_keys(Keys.BACKSPACE)
-        email_field.send_keys(account["email"])
-        safe_print(f"  {prefix} [*] Email entered")
-
-        btn = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.sui-bg-primary")))
-        driver.execute_script("arguments[0].click();", btn)
-        time.sleep(8)
-
+        
+        # Type email character by character to ensure it registers
+        for char in account["email"]:
+            email_field.send_keys(char)
+            time.sleep(0.05)
+        
+        safe_print(f"  {prefix} [*] Email entered: {account['email']}")
+        
+        # Click the submit/continue button
+        time.sleep(2)
+        buttons = driver.find_elements(By.CSS_SELECTOR, "button.sui-bg-primary, button[type='submit'], button.primary")
+        for btn in buttons:
+            if btn.is_displayed() and btn.is_enabled():
+                safe_print(f"  {prefix} [*] Clicking continue button")
+                driver.execute_script("arguments[0].click();", btn)
+                break
+        
+        # Wait for password field to appear
+        time.sleep(10)
         safe_print(f"  {prefix} [*] Waiting for password field...")
-        pass_field = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='password']")))
+        
+        pass_field = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='password']")))
+        time.sleep(3)
+        
+        # Enter password
         try:
-            pass_field.clear()
+            pass_field.click()
+            time.sleep(1)
         except:
             pass
+            
         pass_field.send_keys(account["password"])
         safe_print(f"  {prefix} [*] Password entered")
-
-        btn = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.sui-bg-primary")))
-        driver.execute_script("arguments[0].click();", btn)
-        time.sleep(10)
-        safe_print(f"  {prefix} [*] Login successful")
+        
+        time.sleep(2)
+        
+        # Click login button
+        buttons = driver.find_elements(By.CSS_SELECTOR, "button.sui-bg-primary, button[type='submit'], button.primary")
+        for btn in buttons:
+            if btn.is_displayed() and btn.is_enabled():
+                safe_print(f"  {prefix} [*] Clicking login button")
+                driver.execute_script("arguments[0].click();", btn)
+                break
+        
+        # Wait for login to complete
+        time.sleep(15)
+        
+        # Check current URL to verify login
+        current_url = driver.current_url
+        safe_print(f"  {prefix} [*] Current URL after login: {current_url}")
+        
+        # Check if we got redirected or if we're still on login page
+        if "sign-in" in current_url.lower() or "login" in current_url.lower():
+            safe_print(f"  {prefix} [!] May not have logged in successfully")
+        else:
+            safe_print(f"  {prefix} [*] Login completed")
+            
         return True
+        
     except Exception as e:
         safe_print(f"  {prefix} [✗] Login Error: {str(e)}")
         import traceback
-        safe_print(f"  {prefix} [Trace] {traceback.format_exc()[:100]}")
+        safe_print(f"  {prefix} [Trace] {traceback.format_exc()[:150]}")
         return False
 
 def handle_phone_verification(driver, account, prefix=""):
